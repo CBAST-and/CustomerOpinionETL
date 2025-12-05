@@ -110,7 +110,21 @@ try
             // WORKER SERVICE
             // =============================================
 
-            services.AddHostedService<ETLWorkerService>();
+            services.AddHostedService<ETLWorkerService>(provider =>
+            {
+                var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+                var scope = scopeFactory.CreateScope(); // Create a new scope
+
+                var orchestrator = scope.ServiceProvider.GetRequiredService<ETLOrchestrator>(); // Resolve orchestrator from the scope
+                var loadDimensionsUseCase = scope.ServiceProvider.GetRequiredService<LoadDimensionsUseCase>(); // Resolve LoadDimensionsUseCase from the scope
+
+                return new ETLWorkerService(
+                    provider.GetRequiredService<ILogger<ETLWorkerService>>(),
+                    orchestrator,
+                    loadDimensionsUseCase, // Pass it into the ETLWorkerService constructor
+                    provider.GetRequiredService<IHostApplicationLifetime>()
+                );
+            });
 
             // =============================================
             // CONFIGURACIÓN ADICIONAL
