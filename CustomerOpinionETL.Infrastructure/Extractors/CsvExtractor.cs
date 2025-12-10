@@ -1,6 +1,5 @@
 ﻿namespace CustomerOpinionETL.Infrastructure.Extractors;
 
-using System.Formats.Asn1;
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -30,10 +29,16 @@ public class CsvExtractor : ICsvExtractor
 
         try
         {
-            // Buscar todos los archivos CSV en la carpeta
-            var csvFiles = Directory.GetFiles(_config.CsvFolderPath, "*.csv");
+            // SOLO procesar archivos de encuestas internas (surveys)
+            var csvFiles = Directory.GetFiles(_config.CsvFolderPath, "surveys*.csv");
 
-            _logger.LogInformation("Found {Count} CSV files in {Path}", csvFiles.Length, _config.CsvFolderPath);
+            if (csvFiles.Length == 0)
+            {
+                _logger.LogWarning("No survey CSV files found in {Path}", _config.CsvFolderPath);
+                return allOpinions;
+            }
+
+            _logger.LogInformation("Found {Count} survey CSV files in {Path}", csvFiles.Length, _config.CsvFolderPath);
 
             foreach (var csvFile in csvFiles)
             {
@@ -41,21 +46,13 @@ public class CsvExtractor : ICsvExtractor
                     break;
 
                 var fileName = Path.GetFileName(csvFile);
-
-                // Saltar archivos de dimensiones
-                if (fileName.StartsWith("clients", StringComparison.OrdinalIgnoreCase) ||
-                    fileName.StartsWith("products", StringComparison.OrdinalIgnoreCase) ||
-                    fileName.StartsWith("fuente", StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogDebug("Skipping dimension file: {FileName}", fileName);
-                    continue;
-                }
+                _logger.LogInformation("Processing survey file: {FileName}", fileName);
 
                 var opinions = await ExtractFromCsvFileAsync(csvFile, cancellationToken);
                 allOpinions.AddRange(opinions);
             }
 
-            _logger.LogInformation("Extracted {Count} opinions from CSV files", allOpinions.Count);
+            _logger.LogInformation("Extracted {Count} opinions from survey CSV files", allOpinions.Count);
             return allOpinions;
         }
         catch (Exception ex)
