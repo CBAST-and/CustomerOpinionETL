@@ -43,9 +43,22 @@ public class ApiExtractor : IApiExtractor
 
             // Construir URL con query parameters
             var requestUrl = $"{_config.BaseUrl}{_config.Endpoint}";
+
+            // Asegurarse de obtener TODOS los registros
+            var queryParams = new List<string>();
+
+            // Agregar pageSize grande para obtener todo
+            queryParams.Add("pageSize=1000");
+
+            // Agregar los parámetros de configuración si existen
             if (!string.IsNullOrEmpty(_config.QueryParameters))
             {
-                requestUrl += $"?{_config.QueryParameters}";
+                queryParams.Add(_config.QueryParameters);
+            }
+
+            if (queryParams.Count > 0)
+            {
+                requestUrl += $"?{string.Join("&", queryParams)}";
             }
 
             _logger.LogInformation("Requesting: {Url}", requestUrl);
